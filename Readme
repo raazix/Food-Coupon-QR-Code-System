@@ -1,0 +1,485 @@
+# Food Coupon QR Management System
+
+A web-based food coupon system built for college fests. Students receive a unique QR code via email before the event. Volunteers scan QR codes (or enter USN manually) at the food counter to verify and mark coupons as used — preventing any duplicate entries.
+
+---
+
+## Table of Contents
+
+- [Project Structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Setup — Step by Step](#setup--step-by-step)
+- [Google Sheets CSV Format](#google-sheets-csv-format)
+- [Running the Project](#running-the-project)
+- [Importing Students](#importing-students)
+- [Sending QR Emails](#sending-qr-emails)
+- [On the Day of the Fest](#on-the-day-of-the-fest)
+- [API Reference](#api-reference)
+- [Deployment with Docker](#deployment-with-docker)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## Project Structure
+
+```
+foodcoupon/                        ← project root
+│
+├── manage.py
+├── requirements.txt
+├── .env                           ← your secrets (never commit this)
+├── db.sqlite3                     ← auto-created after migrate
+│
+├── Dockerfile                     ← for server deployment
+├── docker-compose.yml             ← for server deployment
+├── nginx/
+│   └── nginx.conf                 ← for server deployment
+│
+├── foodcoupon/                    ← Django project config
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+│
+└── students/                      ← main app
+    ├── __init__.py
+    ├── admin.py
+    ├── apps.py
+    ├── models.py
+    ├── views.py
+    ├── urls.py
+    ├── templates/
+    │   └── students/
+    │       └── scanner.html       ← volunteer scanner UI
+    └── management/
+        └── commands/
+            ├── __init__.py
+            ├── import_students.py ← run once to load CSV
+            └── send_qr_emails.py  ← run night before fest
+```
+
+---
+
+## Prerequisites
+
+- Python 3.10 or above
+- pip
+- A Gmail account with an **App Password** enabled (for sending emails)
+
+### Install Python dependencies
+
+```bash
+# Create and activate virtual environment
+python -m venv venv
+
+# On Windows:
+venv\Scripts\activate
+
+# On Mac/Linux:
+source venv/bin/activate
+
+# Install packages
+pip install -r requirements.txt
+```
+
+### `requirements.txt` contents
+
+```
+Django==4.2.11
+qrcode[pil]==7.4.2
+python-decouple==3.8
+Pillow==10.2.0
+```
+
+---
+
+## Setup — Step by Step
+
+### 1. Create the `.env` file
+
+Create a file named `.env` in the project root (same folder as `manage.py`):
+
+```env
+SECRET_KEY=any-long-random-string-you-make-up
+EMAIL_HOST_USER=yourcollegeemail@gmail.com
+EMAIL_HOST_PASSWORD=xxxx-xxxx-xxxx-xxxx
+```
+
+**How to get your Gmail App Password:**
+1. Go to [myaccount.google.com](https://myaccount.google.com)
+2. Security → 2-Step Verification → turn it ON
+3. Security → App Passwords → select "Mail" → Generate
+4. Copy the 16-character password into `.env`
+
+---
+
+### 2. Apply database migrations
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+This creates `db.sqlite3` with the `students` table.
+
+---
+
+### 3. Create an admin account
+
+```bash
+python manage.py createsuperuser
+```
+
+You can then log in at `http://127.0.0.1:8000/admin` to see all student records.
+
+---
+
+## Google Sheets CSV Format
+
+Export your Google Sheet as a CSV file. The **first row must have exactly these column names:**
+
+| Name | USN | Section | Food | Email |
+|------|-----|---------|------|-------|
+| Riya Sharma | 1SI21CS045 | CS-A | Veg | riya@college.edu |
+| Arun Kumar | 1SI21EC012 | EC-B | Non-Veg | arun@college.edu |
+
+**Rules:**
+- `Food` must be exactly `Veg` or `Non-Veg` (case-sensitive)
+- `USN` must be unique per student
+- `Email` must be a valid email address
+
+**How to export from Google Sheets:**
+> File → Download → Comma Separated Values (.csv)
+
+Save the file as `students.csv` and place it in the project root.
+
+---
+
+## Running the Project
+
+```bash
+python manage.py runserver
+```
+
+Open `http://127.0.0.1:8000/` in a browser — the scanner page will load.
+
+To allow volunteers on the same Wi-Fi network to access it from their phones:
+
+```bash
+python manage.py runserver 0.0.0.0:8000
+```
+
+Then give them your machine's local IP address, for example `http://192.168.1.10:8000/`
+
+To find your local IP:
+- Windows: run `ipconfig` in Command Prompt → look for IPv4 Address
+- Mac/Linux: run `ifconfig` or `ip a` → look for `inet` under your Wi-Fi interface
+
+---
+
+## Importing Students
+
+Run this **once** after exporting your Google Sheet:
+
+```bash
+python manage.py import_students students.csv
+```
+
+Expected output:
+```
+Done. Created: 600, Skipped (duplicates): 0
+```
+
+If you run it again with the same file, duplicates are skipped automatically. You can safely re-run it if you add new rows to the CSV.
+
+---
+
+## Sending QR Emails
+
+Run this the **night before the fest**:
+
+```bash
+python manage.py send_qr_emails
+```
+
+This will:
+1. Find all students who have not yet received an email
+2. Generate a unique QR code image for each student
+3. Attach it to a personalised email and send via Gmail
+4. Mark `email_sent = True` so they won't get a duplicate
+
+If any emails fail (e.g. bad address), re-run the command — it retries only the ones that failed.
+
+Expected output:
+```
+Sending to 600 students...
+  Sent to riya@college.edu
+  Sent to arun@college.edu
+  ...
+Done. Success: 598, Failed: 2
+```
+
+---
+
+## On the Day of the Fest
+
+### Start the server
+
+```bash
+source venv/bin/activate
+python manage.py runserver 0.0.0.0:8000
+```
+
+### Give volunteers the URL
+
+Share your machine's local IP with all 6 volunteers:
+```
+http://192.168.1.10:8000/
+```
+
+They open it in any mobile browser. No app install needed.
+
+### How the scanner works
+
+The scanner page has **two tabs:**
+
+**Tab 1 — Scan QR Code**
+- Camera opens automatically
+- Volunteer points phone at student's QR code
+- Result appears instantly (green = allowed, red = already used)
+
+**Tab 2 — Enter USN**
+- For students who deleted the email or can't show QR
+- Volunteer types the student's USN (e.g. `1SI21CS045`)
+- Same result card appears
+
+Both methods mark the coupon as used in the database. A coupon cannot be used twice regardless of which method is used.
+
+### Monitor progress in real time
+
+Open this URL in a separate browser tab:
+```
+http://192.168.1.10:8000/api/stats/
+```
+
+It shows:
+```json
+{
+  "total": 600,
+  "scanned": 243,
+  "remaining": 357,
+  "veg_served": 158,
+  "nonveg_served": 85
+}
+```
+
+### Admin panel
+
+```
+http://192.168.1.10:8000/admin
+```
+
+Log in with the superuser account you created. You can search by name or USN, filter by food type, section, or scan status, and manually mark/unmark coupons if needed.
+
+### Backup plan
+
+Before the fest, print a list of all students sorted by USN:
+
+```bash
+python manage.py shell -c "
+from students.models import Student
+for s in Student.objects.order_by('usn'):
+    print(s.usn, s.name, s.food_type)
+"
+```
+
+Keep this printout at the counter in case of Wi-Fi failure.
+
+---
+
+## API Reference
+
+### `POST /api/verify/`
+
+Verifies a coupon by QR ID or USN.
+
+**Request body (QR scan):**
+```json
+{ "qr_id": "550e8400-e29b-41d4-a716-446655440000" }
+```
+
+**Request body (USN entry):**
+```json
+{ "usn": "1SI21CS045" }
+```
+
+**Response — allowed:**
+```json
+{
+  "status": "allowed",
+  "name": "Riya Sharma",
+  "usn": "1SI21CS045",
+  "section": "CS-A",
+  "food": "Veg"
+}
+```
+
+**Response — already used:**
+```json
+{
+  "status": "rejected",
+  "message": "Already used!",
+  "name": "Riya Sharma",
+  "usn": "1SI21CS045"
+}
+```
+
+**Response — not found:**
+```json
+{
+  "status": "invalid",
+  "message": "Not found in system"
+}
+```
+
+---
+
+### `GET /api/stats/`
+
+Returns live counts of scanned coupons.
+
+```json
+{
+  "total": 600,
+  "scanned": 243,
+  "remaining": 357,
+  "veg_served": 158,
+  "nonveg_served": 85
+}
+```
+
+---
+
+## Deployment with Docker
+
+Only needed if you want to run on a cloud server (AWS EC2, etc.) instead of a local laptop.
+
+### Prerequisites
+
+- Docker and Docker Compose installed on the server
+- Port 80 open in the server's firewall/security group
+
+### Steps
+
+```bash
+# 1. SSH into your server and clone/upload the project
+
+# 2. Make sure .env file is present with all values filled in
+
+# 3. Build and start all containers
+docker-compose up --build -d
+
+# 4. Run migrations inside the container
+docker-compose exec web python manage.py migrate
+
+# 5. Create superuser
+docker-compose exec web python manage.py createsuperuser
+
+# 6. Import students
+docker-compose exec web python manage.py import_students students.csv
+
+# 7. Send emails
+docker-compose exec web python manage.py send_qr_emails
+
+# 8. Check all containers are running
+docker-compose ps
+```
+
+Volunteers access the system at `http://YOUR_SERVER_PUBLIC_IP/`
+
+### Useful Docker commands
+
+```bash
+# View logs
+docker-compose logs -f web
+
+# Restart the web container
+docker-compose restart web
+
+# Stop everything
+docker-compose down
+
+# Stop and delete the database too (careful!)
+docker-compose down -v
+```
+
+---
+
+## Troubleshooting
+
+**Scanner page won't load**
+- Make sure the server is running with `0.0.0.0:8000` not just `127.0.0.1:8000`
+- Make sure the volunteer's phone is on the same Wi-Fi network as your laptop
+- Check `ALLOWED_HOSTS = ['*']` is set in `settings.py`
+
+**Camera not opening on phone**
+- Chrome on Android works best
+- Safari on iPhone works too
+- If prompted, allow camera permission
+- Some browsers require HTTPS for camera access — if this happens, use the USN tab instead
+
+**Emails not sending**
+- Make sure 2-Step Verification is ON for your Gmail account
+- Use an App Password, not your regular Gmail password
+- Check your `.env` file has no extra spaces around `=`
+- Gmail free tier allows ~500 emails per day — enough for 600 if you send in one go
+
+**`ModuleNotFoundError: No module named 'decouple'`**
+```bash
+pip install python-decouple
+```
+
+**`django.db.utils.OperationalError: no such table: students_student`**
+```bash
+python manage.py makemigrations students
+python manage.py migrate
+```
+
+**Duplicate USN error during import**
+- The import command skips duplicates automatically
+- If you need to re-import from scratch: delete `db.sqlite3`, run `migrate` again, then import
+
+**QR code scans but says "Not Found"**
+- The QR contains the UUID, not the USN
+- Make sure the email was sent after the import (not before — the UUID is generated at import time)
+- Check in admin that the student's `qr_id` field is not empty
+
+---
+
+## Quick Reference Card (print this for volunteers)
+
+```
+┌─────────────────────────────────────────┐
+│         FOOD COUPON SCANNER             │
+│                                         │
+│  URL: http://192.168.1.XX:8000          │
+│                                         │
+│  GREEN  ✅  = Give food, mark done      │
+│  RED    ❌  = Already eaten, reject     │
+│  YELLOW ❓  = Not in system, check USN  │
+│                                         │
+│  If QR doesn't scan → use USN tab       │
+│  Stats: /api/stats/                     │
+│  Admin: /admin  (for issues only)       │
+└─────────────────────────────────────────┘
+```
+
+---
+
+## Built With
+
+- [Django 4.2](https://www.djangoproject.com/) — backend framework
+- [qrcode](https://pypi.org/project/qrcode/) — QR code generation
+- [html5-qrcode](https://github.com/mebjas/html5-qrcode) — browser camera scanner
+- [Tailwind CSS](https://tailwindcss.com/) — volunteer UI styling
+- SQLite — database (sufficient for 600 students)
