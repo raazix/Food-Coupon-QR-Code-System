@@ -37,24 +37,24 @@ class Command(BaseCommand):
                 
                 draw = ImageDraw.Draw(new_img)
                 try:
-                    # Professional hierarchical typography (Non-bold, refined family)
-                    font_title = ImageFont.truetype("calibri.ttf", 34)
-                    font_sub = ImageFont.truetype("calibri.ttf", 22)
+                    # Times New Roman (Small)
+                    font_title = ImageFont.truetype("times.ttf", 18)
+                    font_sub = ImageFont.truetype("times.ttf", 14)
                 except IOError:
-                    font_title = ImageFont.load_default(size=34)
-                    font_sub = ImageFont.load_default(size=22)
+                    font_title = ImageFont.load_default(size=18)
+                    font_sub = ImageFont.load_default(size=14)
                     
                 text_name = f"{student.name}"
                 text_usn = f"{student.usn}"
                 
                 bbox_name = draw.textbbox((0, 0), text_name, font=font_title)
                 w_name = bbox_name[2] - bbox_name[0]
-                draw.text(((width - w_name) // 2, height + 10), text_name, fill="#111111", font=font_title)
+                draw.text(((width - w_name) // 2, height + 25), text_name, fill="#111111", font=font_title)
                 
                 bbox_usn = draw.textbbox((0, 0), text_usn, font=font_sub)
                 w_usn = bbox_usn[2] - bbox_usn[0]
                 # Use a slightly softer gray for the USN to establish depth and professionalism
-                draw.text(((width - w_usn) // 2, height + 55), text_usn, fill="#555555", font=font_sub)
+                draw.text(((width - w_usn) // 2, height + 50), text_usn, fill="#555555", font=font_sub)
 
                 buf = io.BytesIO()
                 new_img.save(buf, format='PNG')
