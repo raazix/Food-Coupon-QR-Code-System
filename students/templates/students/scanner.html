@@ -42,10 +42,10 @@
   </style>
 </head>
 
-<body class="min-h-screen flex flex-col items-center justify-center p-4 bg-[url('https://images.unsplash.com/photo-1459749411175-04bf5292ceea?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-center bg-fixed relative overflow-hidden">
+<body class="min-h-screen flex flex-col items-center justify-center p-4 bg-[url('https://images.unsplash.com/photo-1459749411175-04bf5292ceea?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-center bg-fixed relative">
     
     <!-- Creative Deep Red/Black Overlay -->
-    <div class="absolute inset-0 bg-gradient-to-br from-[#050505] via-[#050505]/90 to-[#9e1b1b]/30 backdrop-blur-[4px] z-0"></div>
+    <div class="fixed inset-0 bg-gradient-to-br from-[#050505] via-[#050505]/90 to-[#9e1b1b]/30 backdrop-blur-[4px] z-0"></div>
     
     <div class="z-10 w-full max-w-md relative">
         
@@ -217,13 +217,11 @@
             }
             
             el.innerHTML = content;
-            setTimeout(() => { if(el.innerHTML === content) el.innerHTML = ''; }, 6000);
         }
 
         function showError(msg) {
             const el = document.getElementById('result');
             el.innerHTML = `<div class="glass border border-red-500/50 rounded-xl p-4 text-center text-college-neon font-black uppercase tracking-widest animate-pulse shadow-lg shadow-red-500/20 bg-red-950/40">${msg}</div>`;
-            setTimeout(() => { if(el.innerHTML === content) el.innerHTML = ''; }, 4000);
         }
     </script>
 </body>
