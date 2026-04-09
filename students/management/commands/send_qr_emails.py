@@ -1,5 +1,6 @@
 import io
 import qrcode
+from PIL import Image, ImageDraw, ImageFont
 from django.core.mail import EmailMessage
 from django.core.management.base import BaseCommand
 from students.models import Student
@@ -27,17 +28,43 @@ class Command(BaseCommand):
                 )
                 qr.add_data(str(student.qr_id))
                 qr.make(fit=True)
-                img = qr.make_image(fill_color="black", back_color="white")
+                img = qr.make_image(fill_color="black", back_color="white").convert('RGB')
+                
+                width, height = img.size
+                extra_height = 100
+                new_img = Image.new('RGB', (width, height + extra_height), color='white')
+                new_img.paste(img, (0, 0))
+                
+                draw = ImageDraw.Draw(new_img)
+                try:
+                    # Professional hierarchical typography (Non-bold, refined family)
+                    font_title = ImageFont.truetype("calibri.ttf", 34)
+                    font_sub = ImageFont.truetype("calibri.ttf", 22)
+                except IOError:
+                    font_title = ImageFont.load_default(size=34)
+                    font_sub = ImageFont.load_default(size=22)
+                    
+                text_name = f"{student.name}"
+                text_usn = f"{student.usn}"
+                
+                bbox_name = draw.textbbox((0, 0), text_name, font=font_title)
+                w_name = bbox_name[2] - bbox_name[0]
+                draw.text(((width - w_name) // 2, height + 10), text_name, fill="#111111", font=font_title)
+                
+                bbox_usn = draw.textbbox((0, 0), text_usn, font=font_sub)
+                w_usn = bbox_usn[2] - bbox_usn[0]
+                # Use a slightly softer gray for the USN to establish depth and professionalism
+                draw.text(((width - w_usn) // 2, height + 55), text_usn, fill="#555555", font=font_sub)
 
                 buf = io.BytesIO()
-                img.save(buf, format='PNG')
+                new_img.save(buf, format='PNG')
                 buf.seek(0)
 
                 # Build email
-                subject = f"[Fest Lunch] Your food coupon — {student.name}"
+                subject = f"VIGAM’26 – Your food pass"
                 body = (
                     f"Hi {student.name},\n\n"
-                    f"Your food coupon for the college fest lunch is attached below.\n\n"
+                    f"Your food pass for Vigam'26 is attached below.\n\n"
                     f"Details:\n"
                     f"  Name    : {student.name}\n"
                     f"  USN     : {student.usn}\n"
@@ -46,7 +73,7 @@ class Command(BaseCommand):
                     f"  Timing  : 12:00 PM to 1:00 PM\n\n"
                     f"Show this QR code to the volunteer at the food counter.\n"
                     f"Each QR can only be used ONCE.\n\n"
-                    f"See you at the fest!\n"
+                    f"See you at Vigam'26!\n"
                 )
 
                 mail = EmailMessage(subject=subject, body=body, to=[student.email])
