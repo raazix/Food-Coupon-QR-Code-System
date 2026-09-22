@@ -61,10 +61,10 @@ class Command(BaseCommand):
                 buf.seek(0)
 
                 # Build email
-                subject = f"VIGAM’26 – Your food pass"
+                subject = f"AAROHAN'26 – Your food pass"
                 body = (
                     f"Hi {student.name},\n\n"
-                    f"Your food pass for Vigam'26 is attached below.\n\n"
+                    f"Your food pass for AAROHAN'26 is attached below.\n\n"
                     f"Details:\n"
                     f"  Name    : {student.name}\n"
                     f"  USN     : {student.usn}\n"
@@ -72,8 +72,9 @@ class Command(BaseCommand):
                     f"  Food    : {student.food_type}\n"
                     f"  Timing  : 12:00 PM to 1:00 PM\n\n"
                     f"Show this QR code to the volunteer at the food counter.\n"
-                    f"Each QR can only be used ONCE.\n\n"
-                    f"See you at Vigam'26!\n"
+                    f"Note: This QR code is strictly single-use.\n\n"
+                    f"See you at AAROHAN'26!\n"
+                    f"- The Organizing Team\n"
                 )
 
                 if not student.email or not student.email.strip():
