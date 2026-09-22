@@ -2,8 +2,8 @@ import json
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
 from decouple import config
 import csv
 import uuid
@@ -16,19 +16,15 @@ from django.shortcuts import redirect
 from .models import Student
 
 
+@login_required(login_url='/admin/login/')
 def scanner_page(request):
-    return render(request, 'students/scanner.html', {
-        'verify_token': config('VERIFY_TOKEN', default='')
-    })
+    return render(request, 'students/scanner.html')
 
 
-@csrf_exempt
+@login_required(login_url='/admin/login/')
 @require_http_methods(["POST"])
 @transaction.atomic
 def verify_qr(request):
-    token = request.headers.get('X-Verify-Token', '')
-    if token != config('VERIFY_TOKEN', default=''):
-        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=401)
 
     try:
         data = json.loads(request.body)
@@ -71,7 +67,7 @@ def verify_qr(request):
         'food': student.food_type,
     })
 
-
+@login_required(login_url='/admin/login/')
 def stats_view(request):
     total  = Student.objects.count()
     used   = Student.objects.filter(is_used=True).count()

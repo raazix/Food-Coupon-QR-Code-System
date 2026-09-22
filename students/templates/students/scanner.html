@@ -43,7 +43,7 @@
 </head>
 
 <body class="min-h-screen flex flex-col items-center justify-center p-4 bg-[url('https://images.unsplash.com/photo-1459749411175-04bf5292ceea?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-center bg-fixed relative">
-    
+    {% csrf_token %}
     <!-- Creative Deep Red/Black Overlay -->
     <div class="fixed inset-0 bg-gradient-to-br from-[#050505] via-[#050505]/90 to-[#9e1b1b]/30 backdrop-blur-[4px] z-0"></div>
     
@@ -159,11 +159,12 @@
         }
 
         function callVerifyAPI(payload) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
             fetch('/api/verify/', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'X-Verify-Token': '{{ verify_token }}'
+                    'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify(payload),
             })

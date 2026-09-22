@@ -3,11 +3,11 @@ from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-3moa(8ffnrgd^j$k1tbxppw#_0g#mex9yp3jbv3j-st7=3e&(4')
+SECRET_KEY = config('SECRET_KEY')
 
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -49,13 +49,25 @@ TEMPLATES = [
 WSGI_APPLICATION = 'foodcoupon.wsgi.application'
 
 # ── Database ──────────────────────────────────────────────────
-# Using SQLite for simplicity — works perfectly for 600 students
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if config('POSTGRES_DB', default=''):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('POSTGRES_DB'),
+            'USER': config('POSTGRES_USER'),
+            'PASSWORD': config('POSTGRES_PASSWORD'),
+            'HOST': config('POSTGRES_HOST', default='db'),
+            'PORT': config('POSTGRES_PORT', default='5432'),
+        }
     }
-}
+else:
+    # Using SQLite for simplicity in local dev if POSTGRES_DB is not set
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # ── Email (Gmail SMTP) ────────────────────────────────────────
 EMAIL_BACKEND      = 'django.core.mail.backends.smtp.EmailBackend'
