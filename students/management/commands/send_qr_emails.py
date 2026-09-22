@@ -76,6 +76,9 @@ class Command(BaseCommand):
                     f"See you at Vigam'26!\n"
                 )
 
+                if not student.email or not student.email.strip():
+                    raise ValueError("Student has no email address in the database")
+
                 mail = EmailMessage(subject=subject, body=body, to=[student.email])
                 mail.attach(
                     filename=f"coupon_{student.usn}.png",
@@ -87,7 +90,7 @@ class Command(BaseCommand):
                 student.email_sent = True
                 student.save(update_fields=['email_sent'])
                 success += 1
-                self.stdout.write(f"  Sent to {student.email}")
+                self.stdout.write(f" Sent to {student.email}")
 
             except Exception as e:
                 failed += 1

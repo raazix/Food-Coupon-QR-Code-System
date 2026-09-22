@@ -19,13 +19,16 @@ class Command(BaseCommand):
             with open(csv_path, newline='', encoding='utf-8-sig') as f:
                 reader = csv.DictReader(f)
                 students_to_create = []
+                seen_usns = set()
 
                 for row in reader:
                     usn = row['USN'].strip().upper()
-                    if Student.objects.filter(usn=usn).exists():
+                    if usn in seen_usns or Student.objects.filter(usn=usn).exists():
                         self.stdout.write(f"  Skipping duplicate USN: {usn}")
                         skipped += 1
                         continue
+                    
+                    seen_usns.add(usn)
 
                     food = row['Food'].strip()
                     if food not in ['Veg', 'Non-Veg']:
